@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify You're Human</title>
+    <link rel="stylesheet" href="captchastyle.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="captcha-container">
+        <div class="captcha-box">
+            <div class="captcha-header">
+                <h2>Security Check</h2>
+                <p>Please verify you're human to continue</p>
+            </div>
+
+            <div class="captcha-challenge">
+                <div class="checkbox-wrapper" onclick="toggleCheckbox()">
+                    <div class="custom-checkbox" id="checkbox">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <span class="checkbox-label">I'm not a robot</span>
+                </div>
+            </div>
+
+            <button class="verify-button" id="verifyBtn" onclick="verifyAndContinue()">
+                Verify and Continue
+            </button>
+
+            <div class="security-badge">
+                <i class="fas fa-shield-alt"></i>
+                <span>Protected by CharlieKirk™ Security</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isChecked = false;
+
+        function toggleCheckbox() {
+            isChecked = !isChecked;
+            const checkbox = document.getElementById('checkbox');
+            const verifyBtn = document.getElementById('verifyBtn');
+            
+            if (isChecked) {
+                checkbox.classList.add('checked');
+                verifyBtn.classList.add('enabled');
+            } else {
+                checkbox.classList.remove('checked');
+                verifyBtn.classList.remove('enabled');
+            }
+        }
+
+        function verifyAndContinue() {
+            if (isChecked) {
+                window.location.href = 'result.html';
+            }
+        }
+    </script>
+</body>
+</html>

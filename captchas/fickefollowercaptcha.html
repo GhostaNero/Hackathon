@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Fickle Follower Captcha</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'VT323', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .captcha-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+
+        .challenge {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .instruction {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+            text-align: center;
+        }
+        
+        .speed-display {
+            font-size: 16px;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            min-height: 20px;
+        }
+
+        /* Canvas Styles */
+        #movementCanvas {
+            border: 2px solid #333;
+            background: #f0f0f0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            cursor: grab;
+        }
+        
+        #movementCanvas:active {
+            cursor: grabbing;
+        }
+
+        .action-button {
+            display: none;
+        }
+
+        .feedback {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 20px;
+            font-weight: bold;
+            min-height: 30px;
+            color: #ff6b6b; 
+        }
+
+        /* SHAKE ANIMATION RESTORED */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div class="captcha-container" id="captchaContainer">
+        
+        <!-- Main Challenge Area -->
+        <div id="mainChallenge">
+            <h1>🤖 Verify You're Human</h1>
+            <p class="subtitle">A true test of fine motor control and patience...</p>
+            
+            <div class="challenge" id="challengeArea">
+                <div class="instruction">Drag the **BLUE CIRCLE** into the **RED TARGET** when its speed is **LESS THAN 5 UNITS/S** (Speed is displayed below):</div>
+                
+                <div class="speed-display" id="speedDisplay">Speed: 0.00 units/s</div>
+
+                <canvas id="movementCanvas" width="420" height="200"></canvas>
+
+                <button class="action-button" id="checkButton"></button>
+            </div>
+            
+            <div class="feedback" id="feedback"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Canvas Setup ---
+        const canvas = document.getElementById('movementCanvas');
+        const ctx = canvas.getContext('2d');
+        const feedback = document.getElementById('feedback');
+        const speedDisplay = document.getElementById('speedDisplay');
+        const container = document.getElementById('captchaContainer');
+        
+        let animationFrameId;
+        let isRunning = true;
+
+        // --- Game State ---
+        const TARGET_RADIUS = 30;
+        const CIRCLE_RADIUS = 15;
+        const START_POS = { x: 50, y: canvas.height / 2 }; 
+        const TARGET_POS = { x: canvas.width - TARGET_RADIUS - 20, y: canvas.height / 2 };
+
+        // Fickle Circle Physics
+        let circle = {
+            x: START_POS.x,
+            y: START_POS.y,
+            targetX: START_POS.x, 
+            targetY: START_POS.y,
+            velX: 0,
+            velY: 0
+        };
+        
+        const FOLLOW_STRENGTH = 0.05; 
+        const DRAG = 0.95; 
+
+        let isDragging = false;
+        let speed = 0;
+        const SPEED_LIMIT = 5.0; 
+
+        // --- Mouse Event Handlers ---
+        
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!isRunning) return;
+            const pos = getMousePos(e);
+            const dist = Math.sqrt(Math.pow(pos.x - circle.x, 2) + Math.pow(pos.y - circle.y, 2));
+            if (dist < CIRCLE_RADIUS) {
+                isDragging = true;
+                canvas.style.cursor = 'grabbing';
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                canvas.style.cursor = 'grab';
+                checkAnswer();
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isRunning) return;
+            const pos = getMousePos(e);
+            circle.targetX = pos.x;
+            circle.targetY = pos.y;
+        });
+        
+        // --- Reset Logic ---
+        function resetChallenge() {
+            // Reset position
+            circle.x = START_POS.x;
+            circle.y = START_POS.y;
+            circle.targetX = START_POS.x;
+            circle.targetY = START_POS.y;
+            circle.velX = 0;
+            circle.velY = 0;
+            speed = 0;
+            
+            // Clear feedback
+            feedback.textContent = '';
+            
+            isRunning = true;
+            
+            // Restart loop if it was stopped
+            if (!animationFrameId) {
+                gameLoop();
+            }
+        }
+
+        // --- Drawing Logic ---
+        function drawScene() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw Target (Red)
+            ctx.fillStyle = '#ff6b6b'; 
+            ctx.beginPath();
+            ctx.arc(TARGET_POS.x, TARGET_POS.y, TARGET_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 2. Draw Fickle Follower (Blue)
+            ctx.fillStyle = '#667eea'; 
+            ctx.beginPath();
+            ctx.arc(circle.x, circle.y, CIRCLE_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 3. Draw outline (Green when hovering over target)
+            ctx.strokeStyle = isInsideTarget() ? '#4CAF50' : '#333';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+
+        // --- Physics Update Logic ---
+        function updatePhysics() {
+            if (isDragging) {
+                const forceX = circle.targetX - circle.x;
+                const forceY = circle.targetY - circle.y;
+
+                circle.velX += forceX * FOLLOW_STRENGTH;
+                circle.velY += forceY * FOLLOW_STRENGTH;
+                
+                circle.velX *= DRAG;
+                circle.velY *= DRAG;
+
+                circle.x += circle.velX;
+                circle.y += circle.velY;
+                
+                speed = Math.sqrt(Math.pow(circle.velX, 2) + Math.pow(circle.velY, 2));
+            } else {
+                circle.velX *= 0.9;
+                circle.velY *= 0.9;
+                circle.x += circle.velX;
+                circle.y += circle.velY;
+                speed = Math.sqrt(Math.pow(circle.velX, 2) + Math.pow(circle.velY, 2));
+            }
+
+            // Boundary clamping
+            circle.x = Math.max(CIRCLE_RADIUS, Math.min(canvas.width - CIRCLE_RADIUS, circle.x));
+            circle.y = Math.max(CIRCLE_RADIUS, Math.min(canvas.height - CIRCLE_RADIUS, circle.y));
+        }
+        
+        function isInsideTarget() {
+            const dist = Math.sqrt(Math.pow(circle.x - TARGET_POS.x, 2) + Math.pow(circle.y - TARGET_POS.y, 2));
+            return dist < TARGET_RADIUS - CIRCLE_RADIUS; 
+        }
+
+        // --- Main Game Loop ---
+        function gameLoop() {
+            if (isRunning) {
+                updatePhysics();
+                drawScene();
+                
+                speedDisplay.textContent = `Speed: ${speed.toFixed(2)} units/s`;
+
+                // Instant fail during drag if speed is exceeded
+                if (isDragging && speed > SPEED_LIMIT) {
+                    // We call the full failure handling here if speed is exceeded during the drag
+                    handleFailure("Cheater! Speed limit exceeded during drag. Did you think we wouldn't notice?!");
+                    return;
+                }
+                
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+        
+        // Function to handle feedback display and reset/failure (JIGGLE)
+        function handleFailure(message) {
+            // 1. Stop the loop temporarily
+            isRunning = false; 
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+
+            // 2. Apply Jiggle
+            container.classList.add('shake');
+            setTimeout(() => container.classList.remove('shake'), 500);
+
+            // 3. Display failure feedback
+            feedback.className = 'feedback';
+            feedback.style.color = '#ff6b6b';
+            feedback.textContent = `🚨 ${message}`;
+
+            // 4. Wait a moment then reset the challenge
+            setTimeout(() => {
+                resetChallenge();
+            }, 3000); 
+        }
+
+        // --- Check Answer Function (Called on mouseup) ---
+        function checkAnswer() {
+            const inTarget = isInsideTarget();
+            const slowEnough = speed < SPEED_LIMIT; 
+            
+            if (inTarget && slowEnough) {
+                // SUCCESS: Stop the loop, show success message, do NOT jiggle, do NOT reset.
+                isRunning = false;
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+                
+                feedback.className = 'feedback';
+                feedback.style.color = '#4CAF50';
+                feedback.textContent = `✅ VERIFICATION SUCCESSFUL: Unbelievable. The system is confused and now halted.`; 
+
+            } else if (inTarget && !slowEnough) {
+                handleFailure(`Verification Failed: Velocity detected (${speed.toFixed(2)} units/s). You were too fast to settle!`);
+            } else if (!inTarget && slowEnough) {
+                handleFailure("Verification Failed: You were slow enough, but you didn't reach the target. Poor aim detected.");
+            } else {
+                handleFailure(`Total Verification Failure: Both too fast and off target. Pathetic.`);
+            }
+        }
+
+        // Start the game loop when the window loads
+        window.onload = function () {
+            resetChallenge(); 
+        }
+    </script>
+</body>
+</html>

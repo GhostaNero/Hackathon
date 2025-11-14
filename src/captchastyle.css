@@ -1,0 +1,146 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(rgba(135, 206, 235, 0.3), rgba(255, 255, 255, 0.5)),
+                url("cloudy-sky-from-above.jpg") center/cover no-repeat fixed;
+}
+
+.captcha-container {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+}
+
+.captcha-box {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 3rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+}
+
+.captcha-header {
+    margin-bottom: 2rem;
+}
+
+.captcha-header h2 {
+    font-size: 1.8rem;
+    color: #2c3e50;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.captcha-header p {
+    color: #555;
+    font-size: 1rem;
+}
+
+.captcha-challenge {
+    background: rgba(255, 255, 255, 0.6);
+    padding: 2rem;
+    border-radius: 10px;
+    margin-bottom: 2rem;
+    border: 2px dashed rgba(74, 144, 226, 0.4);
+}
+
+.checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.checkbox-wrapper:hover {
+    transform: scale(1.05);
+}
+
+.custom-checkbox {
+    width: 30px;
+    height: 30px;
+    border: 3px solid #4A90E2;
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.custom-checkbox.checked {
+    background: #4A90E2;
+}
+
+.custom-checkbox i {
+    color: white;
+    font-size: 1.2rem;
+    display: none;
+}
+
+.custom-checkbox.checked i {
+    display: block;
+}
+
+.checkbox-label {
+    font-size: 1.1rem;
+    color: #333;
+    font-weight: 500;
+}
+
+.verify-button {
+    background: rgba(74, 144, 226, 0.5);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    padding: 1rem 3rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    box-shadow: 0 8px 32px rgba(74, 144, 226, 0.4);
+    width: 100%;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.verify-button.enabled {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.verify-button.enabled:hover {
+    background: rgba(74, 144, 226, 0.7);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(74, 144, 226, 0.6);
+}
+
+.security-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.security-badge i {
+    color: #4A90E2;
+}
