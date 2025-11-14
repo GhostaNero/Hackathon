@@ -14,7 +14,7 @@
                 <h2>Security Check</h2>
                 <p id="captcha-subtitle">Please verify you're human to continue</p>
                 <div class="progress-indicator">
-                    Stage <span id="stage-num">1</span> of <span id="total-stages">5</span>
+                    Stage <span id="stage-num">1</span> of <span id="total-stages">12</span>
                 </div>
             </div>
 
@@ -78,6 +78,95 @@
                 </div>
             </div>
 
+            <!-- Stage 6: Yanny/Laurel -->
+            <div class="captcha-stage hidden" id="stage6">
+                <p class="audio-instruction">What word do you hear?</p>
+                <div class="audio-controls">
+                    <button class="audio-btn" id="playWordBtn">
+                        <i class="fas fa-volume-up"></i> Play Audio
+                    </button>
+                </div>
+                <div class="word-options">
+                    <button class="word-btn" data-word="yanny">Yanny</button>
+                    <button class="word-btn" data-word="laurel">Laurel</button>
+                </div>
+            </div>
+
+            <!-- Stage 7: Circle Cursor -->
+            <div class="captcha-stage hidden" id="stage7">
+                <p class="circle-instruction">Keep your mouse inside the circle for 5 seconds</p>
+                <div id="circle-game-area">
+                    <div id="moving-circle"></div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="circleProgress"></div>
+                </div>
+            </div>
+
+            <!-- Stage 8: Balloon Pop -->
+            <div class="captcha-stage hidden" id="stage8">
+                <p class="balloon-instruction">Click the balloon to pop it!</p>
+                <div id="balloon-area">
+                    <div id="balloon" class="balloon-normal"></div>
+                </div>
+                <div class="balloon-counter">Balloons popped: <span id="balloonCount">0</span>/10</div>
+            </div>
+
+            <!-- Stage 9: Fickle Follower - Drag circle slowly into target -->
+            <div class="captcha-stage hidden" id="stage9">
+                <p class="fickle-instruction">Drag the BLUE CIRCLE into the RED TARGET when speed is LESS THAN 5 units/s</p>
+                <div class="speed-display">Speed: <span id="speedValue">0.00</span> units/s</div>
+                <canvas id="fickleCanvas" width="420" height="200"></canvas>
+            </div>
+
+            <!-- Stage 10: Normal Slider - Drag to the right -->
+            <div class="captcha-stage hidden" id="stage10">
+                <p class="slider-captcha-instruction">Drag the slider all the way to the right</p>
+                <div id="slider-track-captcha">
+                    <div id="slider-fill-captcha"></div>
+                    <div id="slider-thumb-captcha">&gt;</div>
+                </div>
+            </div>
+
+            <!-- Stage 11: Hold Button - Hold for progress bar -->
+            <div class="captcha-stage hidden" id="stage11">
+                <p class="hold-instruction">Click and HOLD the button until it fills</p>
+                <div class="hold-progress-container">
+                    <div class="hold-progress-bar" id="holdProgressBar"></div>
+                </div>
+                <button class="hold-verify-btn" id="holdVerifyBtn">Verify</button>
+            </div>
+
+            <!-- Stage 12: Terms and Conditions -->
+            <div class="captcha-stage hidden" id="stage12">
+                <h3 class="terms-title">Review & Accept Terms</h3>
+                <p class="terms-subtitle">Please scroll to the end of both documents to continue</p>
+                
+                <div class="terms-containers">
+                    <div class="terms-box">
+                        <h4>Terms & Conditions</h4>
+                        <div class="terms-scroll" id="termsScroll">
+                            <p class="terms-content" id="termsContent"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="terms-box">
+                        <h4>Privacy Policy</h4>
+                        <div class="terms-scroll" id="policyScroll">
+                            <p class="terms-content" id="policyContent"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="terms-status" id="termsStatus">
+                    Status: Both documents must be fully reviewed
+                </div>
+                
+                <button class="terms-agree-btn" id="termsAgreeBtn" disabled>
+                    I Agree to All Terms
+                </button>
+            </div>
+
             <button class="verify-button" id="verifyBtn">
                 Continue
             </button>
@@ -86,8 +175,21 @@
 
             <div class="security-badge">
                 <i class="fas fa-shield-alt"></i>
-                <span>Protected by DarkCheck™ Security</span>
+                <span>Protected by CharlieKirk™ Security</span>
             </div>
+        </div>
+    </div>
+
+    <!-- Loading Screen Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2 class="loading-title">Initializing Time Vertice System</h2>
+            <p class="loading-message" id="loadingMessage">Calibrating temporal luminosity sensors...</p>
+            <div class="loading-progress-bar">
+                <div class="loading-progress-fill" id="loadingProgress"></div>
+            </div>
+            <p class="loading-percentage" id="loadingPercentage">0%</p>
         </div>
     </div>
 
