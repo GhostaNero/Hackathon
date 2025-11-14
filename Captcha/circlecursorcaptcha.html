@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursor Shepherd CAPTCHA</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+            overflow: hidden;
+            user-select: none; /* Prevents text selection */
+        }
+
+        h2 {
+            color: #333;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        #game-container {
+            width: 500px;
+            height: 350px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            background-color: #fff;
+            position: relative;
+            overflow: hidden; /* This is crucial */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        #shepherd-circle {
+            width: 60px; /* The target */
+            height: 60px;
+            background-color: #28a745;
+            opacity: 0.8;
+            border-radius: 50%;
+            position: absolute;
+            top: 100px; /* Start position */
+            left: 100px; /* Start position */
+            cursor: none; /* Hide cursor while over it */
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+            /* Added transition for opacity */
+            transition: opacity 0.2s ease;
+        }
+
+        #progress-container {
+            width: 500px;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #007bff;
+            /* Smooth transitions for both filling and resetting */
+            transition: width 0.1s linear; 
+        }
+
+        #message {
+            margin-top: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            height: 25px; /* Reserve space */
+        }
+
+        #message.success {
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Keep your mouse inside the green circle.</h2>
+
+    <div id="game-container">
+        <div id="shepherd-circle"></div>
+    </div>
+
+    <div id="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <div id="message"></div>
+
+    <script>
+        // --- Get Elements ---
+        const container = document.getElementById('game-container');
+        const circle = document.getElementById('shepherd-circle');
+        const progressBar = document.getElementById('progress-bar');
+        const message = document.getElementById('message');
+
+        // --- Game State ---
+        let progress = 0;
+        let gameActive = true;
+        let isInside = false;
+        let gameInterval = null;
+        // --- Added back rage mode variables ---
+        let rageInterval = null; 
+        let isRageMode = false; 
+
+        // --- Circle Physics ---
+        const circleRect = circle.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        
+        let circleX = circle.offsetLeft;
+        let circleY = circle.offsetTop;
+        let radius = circle.offsetWidth / 2;
+        let speed = 3; // Pixels per tick (was 2)
+        let vx = speed;
+        let vy = speed;
+
+        // --- Config ---
+        const TICK_RATE_MS = 16; // ~60 FPS
+        const TOTAL_TIME_MS = 5000; // 5 seconds to win
+        const PROGRESS_PER_TICK = (100 / TOTAL_TIME_MS) * TICK_RATE_MS;
+        const DECAY_PER_TICK = PROGRESS_PER_TICK / 2; // Slower decay
+
+        // --- 1. Mouse Tracking ---
+        circle.addEventListener('mouseover', () => {
+            isInside = true;
+        });
+
+        circle.addEventListener('mouseout', () => {
+            isInside = false;
+        });
+
+        // --- 2. The Game Loop ---
+        function gameLoop() {
+            if (!gameActive) return;
+
+            // --- A. Move the Circle ---
+            const maxX = container.clientWidth - circle.offsetWidth;
+            const maxY = container.clientHeight - circle.offsetHeight;
+
+            if (isRageMode) {
+                // --- Rage Mode Movement ---
+                circleX = Math.random() * maxX;
+                circleY = Math.random() * maxY;
+            } else {
+                // --- Normal Movement ---
+                circleX += vx;
+                circleY += vy;
+
+                // Wall collision logic
+                if (circleX <= 0 || circleX >= maxX) {
+                    vx = -vx; // Reverse horizontal direction
+                }
+                if (circleY <= 0 || circleY >= maxY) {
+                    vy = -vy; // Reverse vertical direction
+                }
+            } // --- Fixed: Added missing closing brace for 'else' ---
+
+            // Ensure circle stays in bounds (in case of overshooting)
+            circleX = Math.max(0, Math.min(circleX, maxX));
+            circleY = Math.max(0, Math.min(circleY, maxY));
+            
+            // Apply new position
+            circle.style.left = circleX + 'px';
+            circle.style.top = circleY + 'px';
+
+            // --- B. Update Progress ---
+            if (isRageMode) {
+                // Progress is paused during rage mode
+            } else if (isInside) {
+                progress += PROGRESS_PER_TICK;
+            } else {
+                progress -= DECAY_PER_TICK; // Slower decay
+            }
+
+            // Ensure progress stays within bounds (0-100)
+            if (progress < 0) progress = 0;
+            
+            // --- C. Update UI ---
+            progressBar.style.width = progress + '%';
+
+            // --- D. Check for Win ---
+            if (progress >= 100) {
+                winGame();
+            }
+        } // --- Fixed: This now correctly closes gameLoop() ---
+
+        // --- 3. Win Function ---
+        function winGame() {
+            gameActive = false;
+            clearInterval(gameInterval); // Stop the game loop
+            clearInterval(rageInterval); // --- Added: Stop the rage mode trigger ---
+            
+            progressBar.style.width = '100%'; 
+            
+            message.textContent = "Success! Your tracking is superb.";
+            message.className = 'success';
+            
+            circle.style.backgroundColor = '#4CAF50';
+            circle.style.boxShadow = '0 0 15px #4CAF50';
+            circle.style.opacity = '1.0'; // Back to full opacity
+            circle.style.pointerEvents = 'none';
+        }
+
+        // --- 4. Start the Game ---
+        gameInterval = setInterval(gameLoop, TICK_RATE_MS);
+        // --- Added back: Set an interval to periodically trigger rage mode ---
+        rageInterval = setInterval(triggerRageMode, 4000); 
+
+        // --- 5. Added back: Function to TriggerRageMode ---
+        function triggerRageMode() {
+            if (isRageMode || !gameActive) return;
+
+            isRageMode = true;
+            circle.style.opacity = '0.3'; // Make it look different
+
+            setTimeout(() => {
+                isRageMode = false;
+                if (gameActive) { // Only reset opacity if game is still running
+                    circle.style.opacity = '0.8'; 
+                }
+            }, 1000); // Rage mode lasts 1 second
+        }
+
+    </script>
+</body>
+</html>
