@@ -48,12 +48,39 @@ body {
     font-size: 1rem;
 }
 
+.progress-indicator {
+    margin-top: 1rem;
+    color: #666;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.hidden {
+    display: none !important;
+}
+
 .captcha-challenge {
     background: rgba(255, 255, 255, 0.6);
     padding: 2rem;
     border-radius: 10px;
     margin-bottom: 2rem;
     border: 2px dashed rgba(74, 144, 226, 0.4);
+    min-height: 200px;
+}
+
+/* Stage 1: Moving Checkbox */
+#moving-checkbox-container {
+    position: relative;
+    width: 100%;
+    height: 200px;
+}
+
+#moving-checkbox {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.1s linear;
 }
 
 .checkbox-wrapper {
@@ -143,4 +170,232 @@ body {
 
 .security-badge i {
     color: #4A90E2;
+}
+
+/* Stages */
+.captcha-stage {
+    min-height: 250px;
+}
+
+/* Stage 1: Moving Checkbox */
+#moving-checkbox-area {
+    position: relative;
+    width: 100%;
+    height: 250px;
+}
+
+#moving-checkbox {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.05s linear;
+}
+
+/* Stage 2: Text Captcha with blur */
+.text-captcha-display {
+    background: #f0f0f0;
+    padding: 2.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.captcha-text {
+    font-size: 3rem;
+    font-weight: bold;
+    letter-spacing: 10px;
+    color: #333;
+    font-family: 'Courier New', monospace;
+    user-select: none;
+}
+
+.blur-0 { filter: blur(0px); }
+.blur-1 { filter: blur(1px); }
+.blur-2 { filter: blur(3px); }
+.blur-3 { filter: blur(7px); }
+.blur-4 { filter: blur(15px); }
+
+@keyframes flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; transform: scale(1.1); }
+}
+
+.changing {
+    animation: flash 0.3s ease-in-out;
+}
+
+/* Stage 3: Math with format changes */
+.math-captcha-display {
+    background: #f0f0f0;
+    padding: 2.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.math-problem {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #333;
+    font-family: 'Courier New', monospace;
+}
+
+.format-hint {
+    font-size: 0.85rem;
+    color: #666;
+    font-style: italic;
+    margin-top: 0.5rem;
+}
+
+/* Stage 4: Slider */
+.slider-instruction {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 2rem;
+    color: #333;
+}
+
+.target-value {
+    color: #4A90E2;
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+.slider-container-custom {
+    padding: 1rem 0;
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 14px;
+    border-radius: 7px;
+    background: #e0e0e0;
+    outline: none;
+    cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #4A90E2;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #4A90E2;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.1s;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    transform: scale(1.1);
+}
+
+.slider-display {
+    margin-top: 1.5rem;
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #4A90E2;
+    text-align: center;
+}
+
+.slider-hint {
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+/* Stage 5: Audio */
+.audio-instruction {
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+    color: #333;
+    font-weight: 600;
+}
+
+.audio-controls {
+    margin: 2rem 0;
+    text-align: center;
+}
+
+.audio-btn {
+    background: rgba(74, 144, 226, 0.6);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    padding: 1.2rem 2.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.audio-btn:hover {
+    background: rgba(74, 144, 226, 0.8);
+    transform: scale(1.05);
+}
+
+.audio-btn i {
+    margin-right: 0.5rem;
+}
+
+.audio-code-input {
+    width: 100%;
+    text-align: center;
+    font-size: 2.5rem !important;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1.5rem;
+    padding: 1.2rem !important;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+}
+
+/* Input Groups */
+.input-group {
+    margin-top: 1.5rem;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 0.8rem;
+    color: #555;
+    font-weight: 600;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    transition: border-color 0.3s;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #4A90E2;
+}
+
+/* Message Area */
+#message-area {
+    min-height: 2rem;
+    margin-top: 1rem;
+    font-weight: 600;
+    text-align: center;
 }
