@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Beautiful Slider CAPTCHA</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            color: #333;
+        }
+
+        .captcha-wrapper {
+            background-color: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 380px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        .instructions {
+            color: #555;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+
+        #slider-track {
+            width: 100%;
+            height: 50px;
+            background-color: #e0e6ec; /* Light gray track */
+            border-radius: 25px;
+            position: relative;
+            cursor: pointer;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+            overflow: hidden; /* To keep the active fill within bounds */
+        }
+
+        #slider-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #6c5ce7 0%, #a29bfe 100%); /* Purple gradient fill */
+            border-radius: 25px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            transition: width 0.1s ease-out; /* Smooth fill */
+        }
+
+        #slider-thumb {
+            width: 50px;
+            height: 50px;
+            background-color: #6c5ce7; /* Match fill start color */
+            border-radius: 50%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.6em; /* Larger icon */
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s, transform 0.2s ease-out;
+            user-select: none; /* Prevent text selection */
+            z-index: 2; /* Ensure thumb is above fill */
+        }
+
+        #slider-thumb.dragging {
+            cursor: grabbing;
+            transform: scale(1.05); /* Slightly enlarge when dragging */
+        }
+
+        #slider-thumb.verified {
+            background-color: #28a745; /* Green for verified */
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.4);
+            cursor: default;
+        }
+
+        .status-message {
+            margin-top: 30px;
+            font-size: 1.1em;
+            font-weight: 500;
+            color: #e74c3c; /* Default error/unverified */
+            min-height: 25px; /* Reserve space */
+        }
+        .status-message.success {
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="captcha-wrapper">
+        <h1>Verify You Are Human</h1>
+        <p class="instructions">
+            Drag the slider all the way to the right.
+        </p>
+
+        <div id="slider-track">
+            <div id="slider-fill"></div>
+            <div id="slider-thumb">
+                &gt;
+            </div>
+        </div>
+
+        <div id="status-message" class="status-message">
+            </div>
+    </div>
+
+    <script>
+        const thumb = document.getElementById('slider-thumb');
+        const track = document.getElementById('slider-track');
+        const fill = document.getElementById('slider-fill');
+        const statusMessage = document.getElementById('status-message');
+
+        let isDragging = false;
+        let isVerified = false;
+        let startX = 0;
+        let thumbOffsetLeft = 0;
+
+        const targetX = track.offsetWidth - thumb.offsetWidth;
+        const tolerance = 5; // Pixels from the end to count as verified
+
+        function showMessage(msg, type = 'error') {
+            statusMessage.textContent = msg;
+            statusMessage.className = `status-message ${type}`;
+        }
+
+        function startDrag(e) {
+            if (isVerified) return; // Cannot drag if already verified
+            isDragging = true;
+            thumb.classList.add('dragging');
+            
+            // Get initial cursor position and thumb's current position
+            startX = e.clientX || e.touches[0].clientX;
+            thumbOffsetLeft = thumb.offsetLeft;
+
+            e.preventDefault(); // Prevent text selection/scrolling
+            
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchmove', onDragTouch);
+            document.addEventListener('touchend', endDrag);
+            showMessage(''); // Clear message when dragging starts
+        }
+
+        function onDrag(e) {
+            if (!isDragging) return;
+            moveThumb(e.clientX);
+        }
+        
+        function onDragTouch(e) {
+            if (!isDragging) return;
+            moveThumb(e.touches[0].clientX);
+        }
+
+        function moveThumb(currentClientX) {
+            const deltaX = currentClientX - startX;
+            let newX = thumbOffsetLeft + deltaX;
+
+            // Clamp the thumb position within the track bounds
+            newX = Math.max(0, Math.min(newX, targetX));
+            
+            thumb.style.left = newX + 'px';
+            fill.style.width = (newX + thumb.offsetWidth / 2) + 'px'; // Fill based on thumb center
+
+            if (newX >= targetX - tolerance) {
+                verifyCaptcha();
+            }
+        }
+
+        function endDrag() {
+            if (!isDragging) return;
+            isDragging = false;
+            thumb.classList.remove('dragging');
+            
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', endDrag);
+            document.removeEventListener('touchmove', onDragTouch);
+            document.removeEventListener('touchend', endDrag);
+            
+            if (!isVerified) {
+                // If not verified, snap back to start
+                thumb.style.left = '0px';
+                fill.style.width = '0%';
+                showMessage('Keep dragging to the right!');
+            }
+        }
+
+        function verifyCaptcha() {
+            if (isVerified) return; // Already verified
+            isVerified = true;
+            
+            thumb.style.left = targetX + 'px'; // Snap to final position
+            fill.style.width = '100%'; // Ensure full fill
+            thumb.classList.add('verified');
+            thumb.textContent = '✓'; // Change text to checkmark
+            
+            showMessage('Verification successful!', 'success');
+            
+            // Remove all event listeners after successful verification
+            thumb.removeEventListener('mousedown', startDrag);
+            thumb.removeEventListener('touchstart', startDrag);
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', endDrag);
+            document.removeEventListener('touchmove', onDragTouch);
+            document.removeEventListener('touchend', endDrag);
+        }
+
+        // Initialize drag listeners on the thumb
+        thumb.addEventListener('mousedown', startDrag);
+        thumb.addEventListener('touchstart', startDrag);
+
+        // Adjust targetX on window resize for responsiveness
+        window.addEventListener('resize', () => {
+            if (!isVerified) { // Only reset if not already verified
+                thumb.style.left = '0px';
+                fill.style.width = '0%';
+            }
+            // Recalculate targetX
+            const newTargetX = track.offsetWidth - thumb.offsetWidth;
+            if (isVerified) { // If already verified, snap to the new target end
+                 thumb.style.left = newTargetX + 'px';
+            }
+        });
+
+        // Initial setup for the slider position
+        window.addEventListener('load', () => {
+             // Set targetX correctly after initial layout
+             const newTargetX = track.offsetWidth - thumb.offsetWidth;
+             if (isVerified) {
+                 thumb.style.left = newTargetX + 'px';
+                 fill.style.width = '100%';
+             }
+        });
+    </script>
+</body>
+</html>
