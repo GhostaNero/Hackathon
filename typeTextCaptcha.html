@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Captcha Verification</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .captcha-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .attempt-counter {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .captcha-display {
+            background: #f0f0f0;
+            padding: 40px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 120px;
+            border: 2px solid #ddd;
+        }
+
+        .captcha-text {
+            font-size: 48px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #333;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Courier New', monospace;
+            transition: filter 0.5s ease;
+            user-select: none;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .submit-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .submit-btn:hover {
+            background: #5568d3;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+
+        .refresh-btn {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .refresh-btn:hover {
+            background: #d0d0d0;
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.98);
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .message.error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .message.success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .message.hidden {
+            display: none;
+        }
+
+        .blur-0 { filter: blur(0px); }
+        .blur-1 { filter: blur(1px); }
+        .blur-2 { filter: blur(3px); }
+        .blur-3 { filter: blur(7px); }
+        .blur-4 { filter: blur(15px); }
+        .blur-extreme { filter: blur(25px); }
+    </style>
+</head>
+<body>
+    <div class="captcha-container">
+        <h2>Verify You're Human</h2>
+        <div class="attempt-counter">Stage <span id="stageNum">1</span> of 5</div>
+        
+        <div class="captcha-display">
+            <div class="captcha-text" id="captchaText"></div>
+        </div>
+
+        <div class="input-group">
+            <label for="captchaInput">Type the characters you see above:</label>
+            <input type="text" id="captchaInput" placeholder="Enter captcha..." autocomplete="off">
+        </div>
+
+        <div class="button-group">
+            <button type="button" class="refresh-btn" id="refreshBtn">New Captcha</button>
+            <button type="button" class="submit-btn" id="verifyBtn">✓ Verify</button>
+        </div>
+
+        <div class="message hidden" id="message"></div>
+    </div>
+
+    <script>
+        let stageCount = 0;
+        let currentCaptcha = '';
+
+        const blurLevels = [
+            'blur-0',   // Stage 1 - Clear
+            'blur-1',   // Stage 2 - Slightly blurry
+            'blur-2',   // Stage 3 - More blurry
+            'blur-3',   // Stage 4 - Very blurry
+            'blur-4',   // Stage 5 - Extremely blurry
+            'blur-extreme' // Stage 6+ (shouldn't happen)
+        ];
+
+        function generateRandomCaptcha() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let captcha = '';
+            for (let i = 0; i < 6; i++) {
+                captcha += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return captcha;
+        }
+
+        function updateCaptchaDisplay() {
+            const captchaElement = document.getElementById('captchaText');
+            captchaElement.textContent = currentCaptcha;
+            
+            // Apply blur based on stage count
+            captchaElement.className = 'captcha-text';
+            const blurClass = stageCount < blurLevels.length ? blurLevels[stageCount] : 'blur-extreme';
+            captchaElement.classList.add(blurClass);
+        }
+
+        function generateNewCaptcha() {
+            currentCaptcha = generateRandomCaptcha();
+            updateCaptchaDisplay();
+            
+            document.getElementById('captchaInput').value = '';
+            const messageElement = document.getElementById('message');
+            messageElement.classList.add('hidden');
+            messageElement.classList.remove('error', 'success');
+        }
+
+        function verifyCaptcha() {
+            const userInput = document.getElementById('captchaInput').value.toUpperCase().trim();
+            const messageElement = document.getElementById('message');
+            
+            if (userInput === currentCaptcha) {
+                stageCount++;
+                document.getElementById('stageNum').textContent = stageCount + 1;
+                
+                if (stageCount >= 5) {
+                    // Final stage - show success then failure
+                    messageElement.textContent = '✓ All stages complete! Loading your download...';
+                    messageElement.classList.remove('hidden', 'error');
+                    messageElement.classList.add('success');
+                    
+                    setTimeout(() => {
+                        messageElement.textContent = 'Download Failed! Please reload the page.';
+                        messageElement.classList.remove('success');
+                        messageElement.classList.add('error');
+                    }, 2000);
+                } else {
+                    // Show success message briefly, then generate new captcha
+                    messageElement.textContent = `✓ Correct! Moving to stage ${stageCount + 1}...`;
+                    messageElement.classList.remove('hidden', 'error');
+                    messageElement.classList.add('success');
+                    
+                    setTimeout(() => {
+                        generateNewCaptcha();
+                    }, 1000);
+                }
+            } else {
+                // Wrong answer - show error and generate new captcha after delay
+                messageElement.textContent = 'Incorrect. Try again.';
+                messageElement.classList.remove('hidden', 'success');
+                messageElement.classList.add('error');
+                
+                // Generate new captcha at same difficulty after showing error
+                setTimeout(() => {
+                    currentCaptcha = generateRandomCaptcha();
+                    updateCaptchaDisplay();
+                    document.getElementById('captchaInput').value = '';
+                }, 1500);
+            }
+        }
+
+        // Generate captcha immediately
+        generateNewCaptcha();
+
+        // Set up event listeners
+        document.getElementById('verifyBtn').onclick = verifyCaptcha;
+        document.getElementById('refreshBtn').onclick = generateNewCaptcha;
+        
+        // Allow Enter key to submit
+        document.getElementById('captchaInput').onkeypress = function(e) {
+            if (e.key === 'Enter') {
+                verifyCaptcha();
+            }
+        };
+    </script>
+</body>
+</html>
