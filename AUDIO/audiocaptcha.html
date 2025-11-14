@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Security Check</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for loading spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen font-sans">
+
+    <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-gray-700">
+        <h1 class="text-2xl font-bold text-center mb-2">Audio Security Check</h1>
+        <p class="text-gray-400 text-center mb-6">In the clip, a 4-digit code is whispered. Please enter the code to continue.</p>
+
+        <div class="space-y-4">
+            <!-- Audio Controls -->
+            <div class="flex space-x-4">
+                <button id="playBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-all">
+                    <span id="playIcon">
+                        <!-- Play Icon SVG -->
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </span>
+                    <span id="loadingIcon" class="loader hidden"></span>
+                    <span id="playText" class="ml-2">Play</span>
+                </button>
+                <button id="pardonBtn" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                    Pardon?
+                </button>
+            </div>
+
+            <!-- Input Field -->
+            <div>
+                <label for="codeInput" class="block text-sm font-medium text-gray-300 mb-2">Enter 4-Digit Code (e.g., "5313"):</label>
+                <input type="text" id="codeInput" maxlength="4" class="w-full p-4 bg-gray-700 border border-gray-600 rounded-lg text-white text-center text-3xl font-mono tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="----">
+            </div>
+
+            <!-- Verify Button -->
+            <button id="verifyBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                Verify
+            </button>
+
+            <!-- Message Area -->
+            <p id="message" class="text-center h-6"></p>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const playBtn = document.getElementById('playBtn');
+        const playText = document.getElementById('playText');
+        const playIcon = document.getElementById('playIcon');
+        const loadingIcon = document.getElementById('loadingIcon');
+        const pardonBtn = document.getElementById('pardonBtn');
+        const verifyBtn = document.getElementById('verifyBtn');
+        const codeInput = document.getElementById('codeInput');
+        const message = document.getElementById('message');
+
+        // --- Audio & State ---
+        let correctCode = null;
+        let playCount = 0;
+        
+        // We need both audio systems now
+        let audioContext;
+        const synth = window.speechSynthesis;
+        let voices = [];
+        let activeAudioSources = []; // To store all WEB AUDIO sounds
+
+        // --- Helper Functions ---
+
+        /**
+         * Creates and returns a new AudioContext.
+         */
+        function getAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            audioContext.resume();
+            return audioContext;
+        }
+
+        /**
+         * Populates the voices array when they are loaded.
+         */
+        function loadVoices() {
+            voices = synth.getVoices();
+            if (synth.onvoiceschanged !== undefined) {
+                synth.onvoiceschanged = () => voices = synth.getVoices();
+            }
+        }
+
+        /**
+         * Stops all currently playing Web Audio sources.
+         */
+        function stopAllAudio() {
+            activeAudioSources.forEach(source => {
+                try {
+                    source.stop();
+                    source.disconnect();
+                } catch (e) {
+                    // Ignore errors if source is already stopped
+                }
+            });
+            activeAudioSources = [];
+            synth.cancel(); // Also stop any speech synthesis
+        }
+
+        /**
+         * Generates a random 4-digit code (1-9).
+         */
+        function generateRandomCode() {
+            let code = "";
+            for (let i = 0; i < 4; i++) {
+                code += Math.floor(Math.random() * 9) + 1; // 1-9
+            }
+            correctCode = code;
+            console.log(`New code generated: ${correctCode}`);
+        }
+
+        /**
+         * Sets the loading state for the play button.
+         */
+        function setLoading(isLoading) {
+            playBtn.disabled = isLoading;
+            pardonBtn.disabled = isLoading;
+            verifyBtn.disabled = isLoading;
+
+            if (isLoading) {
+                playText.textContent = 'Playing...';
+                playIcon.classList.add('hidden');
+                loadingIcon.classList.remove('hidden');
+            } else {
+                playText.textContent = 'Play';
+                playIcon.classList.remove('hidden');
+                loadingIcon.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Creates a looping white noise buffer source. (This is from the previous version)
+         */
+        function createWhiteNoise(context, gainValue) {
+            const bufferSize = 2 * context.sampleRate;
+            const noiseBuffer = context.createBuffer(1, bufferSize, context.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1; // Generate random values between -1 and 1
+            }
+
+            const noiseSource = context.createBufferSource();
+            noiseSource.buffer = noiseBuffer;
+            noiseSource.loop = true;
+
+            const noiseGain = context.createGain();
+            noiseGain.gain.setValueAtTime(gainValue, context.currentTime);
+
+            noiseSource.connect(noiseGain).connect(context.destination);
+            return noiseSource;
+        }
+
+        /**
+         * Speaks a given text with specified parameters.
+         * Runs a callback function when the speech is finished.
+         */
+        function speak(text, options = {}, onEndCallback) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // Apply options
+            utterance.voice = options.voice || voices[0];
+            utterance.pitch = options.pitch || 1;   // 0 to 2
+            utterance.rate = options.rate || 1;     // 0.1 to 10
+            utterance.volume = options.volume || 1; // 0 to 1
+
+            utterance.onend = onEndCallback;
+            utterance.onerror = (e) => {
+                console.error("Speech synthesis error:", e);
+                onEndCallback(); // Still run callback to re-enable buttons
+            };
+            
+            synth.speak(utterance);
+        }
+
+        // --- Event Handlers ---
+
+        /**
+         * Handles the main "Play" button click.
+         * This also handles the "Pardon?" logic.
+         */
+        function handlePlay() {
+            const context = getAudioContext();
+            stopAllAudio(); // Stop all sounds from previous play
+            setLoading(true);
+
+            playCount++;
+            message.textContent = '';
+
+            if (playCount === 1) {
+                generateRandomCode();
+            }
+
+            const now = context.currentTime;
+
+            // --- 1. The Background Noise (Web Audio) ---
+            // This is the white noise you liked
+            const noise = createWhiteNoise(context, 0.3); // Moderately loud static
+            noise.start(now);
+            activeAudioSources.push(noise);
+
+            // --- 2. "Pardon?" Noises (Web Audio, Layered) ---
+            if (playCount === 2) {
+                message.textContent = "Adding more... context.";
+                message.className = 'text-center h-6 text-yellow-400';
+                
+                // Add a low rumble
+                const rumble = context.createOscillator();
+                rumble.type = 'sawtooth';
+                rumble.frequency.setValueAtTime(80, now); // Low 80Hz rumble
+                const rumbleGain = context.createGain();
+                rumbleGain.gain.setValueAtTime(0.15, now);
+                rumble.connect(rumbleGain).connect(context.destination);
+                rumble.start(now);
+                activeAudioSources.push(rumble);
+
+            } else if (playCount > 2) {
+                message.textContent = "Are you sure you're human?";
+                message.className = 'text-center h-6 text-orange-400';
+                
+                // Add the rumble again
+                const rumble2 = context.createOscillator();
+                rumble2.type = 'sawtooth';
+                rumble2.frequency.setValueAtTime(80, now);
+                const rumbleGain2 = context.createGain();
+                rumbleGain2.gain.setValueAtTime(0.15, now);
+                rumble2.connect(rumbleGain2).connect(context.destination);
+                rumble2.start(now);
+                activeAudioSources.push(rumble2);
+
+                // Add a high-pitched whine
+                const whine = context.createOscillator();
+                whine.type = 'square';
+                whine.frequency.setValueAtTime(1200, now); // Annoying
+                const whineGain = context.createGain();
+                whineGain.gain.setValueAtTime(0.05, now); // Quiet but annoying
+                whine.connect(whineGain).connect(context.destination);
+                whine.start(now);
+                activeAudioSources.push(whine);
+            }
+
+            // --- 3. The Code (Speech Synthesis) ---
+            // This runs on a different audio system, so it plays on top
+            const codeText = correctCode.split('').join(' '); // "5 3 1 3"
+            speak(codeText, {
+                pitch: 0.2,
+                rate: 0.9,
+                volume: 0.6, // Low, but not zero
+                voice: voices.find(v => v.lang.startsWith('en') && (v.name.includes('Female') || v.name.includes('Zira'))) || voices[0]
+            }, () => {
+                // This is the callback function. It runs when speech is done.
+                stopAllAudio(); // Stop the white noise, rumble, etc.
+                setLoading(false); // Re-enable buttons
+            });
+        }
+
+        /**
+         * Handles the "Verify" button click.
+         */
+        function handleVerify() {
+            const input = codeInput.value;
+            if (input === correctCode) {
+                message.textContent = "Success! You are human... for now.";
+                message.className = 'text-center h-6 text-green-400';
+                playBtn.disabled = true;
+                pardonBtn.disabled = true;
+                verifyBtn.disabled = true;
+                codeInput.disabled = true;
+                codeInput.classList.add('bg-green-900', 'border-green-700');
+                stopAllAudio(); // Silence everything on success
+            } else {
+                message.textContent = "Incorrect. Robot detected. Please try again.";
+                message.className = 'text-center h-6 text-red-400';
+                // Rage-inducing part: Reset everything
+                resetCaptcha();
+            }
+        }
+
+        /**
+         * Resets the CAPTCHA to its initial state.
+         */
+        function resetCaptcha() {
+            correctCode = null;
+            playCount = 0;
+            codeInput.value = '';
+            setLoading(false);
+            stopAllAudio(); // Stop all sounds
+        }
+        
+        // --- Initial Setup ---
+        function init() {
+            // We must load voices before we can use them
+            loadVoices(); 
+            if (synth.onvoiceschanged !== undefined) {
+                synth.onvoiceschanged = loadVoices;
+            }
+
+            playBtn.addEventListener('click', handlePlay);
+            pardonBtn.addEventListener('click', handlePlay); // "Pardon?" just re-triggers play
+            verifyBtn.addEventListener('click', handleVerify);
+            
+            // Enable buttons initially
+            setLoading(false);
+        }
+
+        // Wait for the DOM to be fully loaded before running init
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
