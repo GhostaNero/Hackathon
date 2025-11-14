@@ -12,51 +12,85 @@
         <div class="captcha-box">
             <div class="captcha-header">
                 <h2>Security Check</h2>
-                <p>Please verify you're human to continue</p>
-            </div>
-
-            <div class="captcha-challenge">
-                <div class="checkbox-wrapper" onclick="toggleCheckbox()">
-                    <div class="custom-checkbox" id="checkbox">
-                        <i class="fas fa-check"></i>
-                    </div>
-                    <span class="checkbox-label">I'm not a robot</span>
+                <p id="captcha-subtitle">Please verify you're human to continue</p>
+                <div class="progress-indicator">
+                    Stage <span id="stage-num">1</span> of <span id="total-stages">5</span>
                 </div>
             </div>
 
-            <button class="verify-button" id="verifyBtn" onclick="verifyAndContinue()">
-                Verify and Continue
+            <!-- Stage 1: Moving Checkbox -->
+            <div class="captcha-stage" id="stage1">
+                <div id="moving-checkbox-area">
+                    <div class="checkbox-wrapper" id="moving-checkbox">
+                        <div class="custom-checkbox" id="checkbox1">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <span class="checkbox-label">I'm not a robot</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage 2: Type Text (gets progressively blurrier) -->
+            <div class="captcha-stage hidden" id="stage2">
+                <div class="text-captcha-display">
+                    <div class="captcha-text blur-0" id="captchaText"></div>
+                </div>
+                <div class="input-group">
+                    <label for="textInput">Type the characters you see:</label>
+                    <input type="text" id="textInput" placeholder="Enter text..." autocomplete="off">
+                </div>
+            </div>
+
+            <!-- Stage 3: Math (changing numbers + format changes) -->
+            <div class="captcha-stage hidden" id="stage3">
+                <div class="math-captcha-display">
+                    <div class="math-problem" id="mathProblem"></div>
+                </div>
+                <div class="input-group">
+                    <label for="mathInput">Enter your answer:</label>
+                    <input type="text" id="mathInput" placeholder="Type answer..." autocomplete="off">
+                    <div class="format-hint" id="formatHint"></div>
+                </div>
+            </div>
+
+            <!-- Stage 4: Slider (gets jittery) -->
+            <div class="captcha-stage hidden" id="stage4">
+                <div class="slider-instruction">
+                    Move slider to exactly <span class="target-value" id="targetSliderValue">50</span>%
+                </div>
+                <div class="slider-container-custom">
+                    <input type="range" id="sliderInput" min="0" max="10000" value="5000">
+                    <div class="slider-display">Current: <span id="sliderCurrentValue">50</span>%</div>
+                    <div class="slider-hint" id="sliderHint">Must be exact!</div>
+                </div>
+            </div>
+
+            <!-- Stage 5: Audio Code -->
+            <div class="captcha-stage hidden" id="stage5">
+                <p class="audio-instruction">Listen to the 4-digit code</p>
+                <div class="audio-controls">
+                    <button class="audio-btn" id="playAudioBtn">
+                        <i class="fas fa-volume-up"></i> Play Audio
+                    </button>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="audioInput" maxlength="4" placeholder="----" class="audio-code-input">
+                </div>
+            </div>
+
+            <button class="verify-button" id="verifyBtn">
+                Continue
             </button>
+
+            <div id="message-area"></div>
 
             <div class="security-badge">
                 <i class="fas fa-shield-alt"></i>
-                <span>Protected by CharlieKirk™ Security</span>
+                <span>Protected by DarkCheck™ Security</span>
             </div>
         </div>
     </div>
 
-    <script>
-        let isChecked = false;
-
-        function toggleCheckbox() {
-            isChecked = !isChecked;
-            const checkbox = document.getElementById('checkbox');
-            const verifyBtn = document.getElementById('verifyBtn');
-            
-            if (isChecked) {
-                checkbox.classList.add('checked');
-                verifyBtn.classList.add('enabled');
-            } else {
-                checkbox.classList.remove('checked');
-                verifyBtn.classList.remove('enabled');
-            }
-        }
-
-        function verifyAndContinue() {
-            if (isChecked) {
-                window.location.href = 'result.html';
-            }
-        }
-    </script>
+    <script src="main.js"></script>
 </body>
 </html>
