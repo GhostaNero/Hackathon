@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slider Captcha Verification</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .captcha-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .attempt-counter {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .instruction {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+
+        .target-percentage {
+            font-size: 36px;
+            color: #667eea;
+        }
+
+        .slider-container {
+            margin-bottom: 30px;
+        }
+
+        .slider-wrapper {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+            background: #e0e0e0;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        .percentage-display {
+            text-align: center;
+            font-size: 48px;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .percentage-value {
+            color: #667eea;
+        }
+
+        .tolerance-indicator {
+            text-align: center;
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .submit-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .submit-btn:hover {
+            background: #5568d3;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+
+        .reset-btn {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .reset-btn:hover {
+            background: #d0d0d0;
+        }
+
+        .reset-btn:active {
+            transform: scale(0.98);
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .message.error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .message.success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .message.hidden {
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="captcha-container">
+        <h2>🎯 Slider Verification</h2>
+        <div class="attempt-counter">Stage <span id="stageNum">1</span> of 5</div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+
+        <div class="instruction">
+            Move slider to exactly <span class="target-percentage" id="targetPercentage">50%</span>
+        </div>
+
+        <div class="slider-container">
+            <div class="slider-wrapper">
+                <input type="range" id="slider" min="0" max="10000" value="5000" step="1">
+            </div>
+            
+            <div class="percentage-display">
+                Current: <span class="percentage-value" id="currentPercentage">50%</span>
+            </div>
+
+            <div class="tolerance-indicator" id="toleranceIndicator">
+                Must be exact!
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button type="button" class="reset-btn" id="resetBtn">🔄 Reset Slider</button>
+            <button type="button" class="submit-btn" id="verifyBtn">✓ Verify</button>
+        </div>
+
+        <div class="message hidden" id="message"></div>
+    </div>
+
+    <script>
+        let stageCount = 0;
+        let currentValue = 50;
+        let targetValue = 50;
+
+        const stages = [
+            { target: 50, jitterAmount: 1 },    // Stage 1: Target 50%, jitter ±1
+            { target: 33, jitterAmount: 2 },    // Stage 2: Target 33%, jitter ±2
+            { target: 67, jitterAmount: 3 },    // Stage 3: Target 67%, jitter ±3
+            { target: 75, jitterAmount: 4 },    // Stage 4: Target 75%, jitter ±4
+            { target: 42, jitterAmount: 5 }     // Stage 5: Target 42%, jitter ±5
+        ];
+
+        const slider = document.getElementById('slider');
+        const currentPercentageElement = document.getElementById('currentPercentage');
+        const targetPercentageElement = document.getElementById('targetPercentage');
+        const toleranceIndicator = document.getElementById('toleranceIndicator');
+        const messageElement = document.getElementById('message');
+        const progressFill = document.getElementById('progressFill');
+
+        function updateStage() {
+            const stage = stages[stageCount];
+            targetValue = stage.target;
+            
+            targetPercentageElement.textContent = `${targetValue}%`;
+            
+            if (stageCount === 0) {
+                toleranceIndicator.textContent = 'Must be exact!';
+            } else {
+                toleranceIndicator.textContent = `Must be exact! (Warning: slider is jumpy)`;
+            }
+            
+            // Update progress bar
+            const progress = (stageCount / stages.length) * 100;
+            progressFill.style.width = `${progress}%`;
+            
+            // Reset slider to middle
+            slider.value = 5000;
+            updateSliderDisplay();
+        }
+
+        function updateSliderDisplay() {
+            const stage = stages[stageCount];
+            const sliderValue = parseInt(slider.value);
+            
+            // Calculate base percentage
+            const basePercentage = Math.round(sliderValue / 100);
+            
+            // Add jitter that increases with each stage
+            const jitter = Math.floor(Math.random() * (stage.jitterAmount * 2 + 1)) - stage.jitterAmount;
+            
+            currentValue = basePercentage + jitter;
+            
+            // Keep within bounds
+            if (currentValue < 0) currentValue = 0;
+            if (currentValue > 100) currentValue = 100;
+            
+            currentPercentageElement.textContent = `${currentValue}%`;
+        }
+
+        function resetSlider() {
+            slider.value = 5000;
+            updateSliderDisplay();
+            messageElement.classList.add('hidden');
+            messageElement.classList.remove('error', 'success');
+        }
+
+        function verifySlider() {
+            if (currentValue === targetValue) {
+                // Success!
+                stageCount++;
+                
+                if (stageCount >= stages.length) {
+                    // Final stage complete
+                    messageElement.textContent = '✓ Perfect! All stages complete! Loading your download...';
+                    messageElement.classList.remove('hidden', 'error');
+                    messageElement.classList.add('success');
+                    
+                    // Update progress to 100%
+                    progressFill.style.width = '100%';
+                    
+                    setTimeout(() => {
+                        messageElement.textContent = '❌ Download Failed! Please reload the page.';
+                        messageElement.classList.remove('success');
+                        messageElement.classList.add('error');
+                    }, 2000);
+                } else {
+                    // Move to next stage
+                    document.getElementById('stageNum').textContent = stageCount + 1;
+                    messageElement.textContent = `✓ Perfect! Moving to stage ${stageCount + 1}...`;
+                    messageElement.classList.remove('hidden', 'error');
+                    messageElement.classList.add('success');
+                    
+                    setTimeout(() => {
+                        updateStage();
+                        messageElement.classList.add('hidden');
+                    }, 1500);
+                }
+            } else {
+                // Not exact
+                const difference = currentValue - targetValue;
+                if (difference > 0) {
+                    messageElement.textContent = `❌ Too high by ${difference}%! Try again.`;
+                } else {
+                    messageElement.textContent = `❌ Too low by ${Math.abs(difference)}%! Try again.`;
+                }
+                messageElement.classList.remove('hidden', 'success');
+                messageElement.classList.add('error');
+                
+                setTimeout(() => {
+                    messageElement.classList.add('hidden');
+                }, 2000);
+            }
+        }
+
+        // Update display as slider moves
+        slider.addEventListener('input', updateSliderDisplay);
+
+        // Set up event listeners
+        document.getElementById('verifyBtn').onclick = verifySlider;
+        document.getElementById('resetBtn').onclick = resetSlider;
+
+        // Initialize
+        updateStage();
+    </script>
+</body>
+</html>
