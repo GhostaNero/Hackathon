@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Verification Captcha</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'VT323', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .captcha-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            position: relative;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+
+        .timer {
+            text-align: center;
+            color: #ff6b6b;
+            font-size: 16px;
+            margin-bottom: 20px;
+            min-height: 24px;
+        }
+
+        .challenge {
+            margin-bottom: 30px;
+        }
+
+        .instruction {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #333;
+            text-align: center;
+        }
+
+        .audio-player {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .play-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'VT323', monospace;
+            width: 100px;
+            height: 100px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .play-button:hover {
+            background: #5568d3;
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .options {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .option-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'VT323', monospace;
+            flex: 1;
+            max-width: 200px;
+        }
+
+        .option-button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .feedback {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 20px;
+            font-weight: bold;
+            min-height: 30px;
+            color: #ff6b6b;
+        }
+
+        .feedback.success {
+            color: #4CAF50;
+        }
+
+        .attempts {
+            text-align: center;
+            color: #999;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        .pity-message {
+            text-align: center;
+        }
+
+        .pity-message h2 {
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .pity-message p {
+            font-size: 22px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .continue-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'VT323', monospace;
+            margin-top: 20px;
+        }
+
+        .continue-button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="captcha-container" id="captchaContainer">
+        <!-- Original Challenge Area -->
+        <div id="mainChallenge">
+            <h1>🤖 Verify You're Human</h1>
+            <p class="subtitle">This should only take a moment...</p>
+            
+            <div class="challenge" id="challengeArea">
+                <div class="instruction">Listen to the audio clip and select what you hear:</div>
+                <div class="audio-player">
+                    <button class="play-button" onclick="playAudio()">▶</button>
+                </div>
+                <div class="options">
+                    <button class="option-button" onclick="checkAnswer('yanny')">Yanny</button>
+                    <button class="option-button" onclick="checkAnswer('laurel')">Laurel</button>
+                </div>
+            </div>
+            
+            <div class="feedback" id="feedback"></div>
+        </div>
+
+        <!-- Hidden Wrong Answer Screen (Pity Message) -->
+        <div class="pity-message" id="wrongAnswerScreen" style="display: none;">
+            <h2>🚨 Verification Failed 🚨</h2>
+            <p>It seems your auditory perception is highly questionable. A human would never get this wrong.</p>
+        </div>
+    </div>
+
+    <script>
+        // Restoring the audio file reference. This assumes 'YannyLaurel.mp3' is accessible in your environment.
+        // (Note: This file will likely fail to load if run inside a restricted sandbox environment like the one used by Gemini.)
+        let audio = new Audio('YannyLaurel.mp3');
+
+        function playAudio() {
+            audio.currentTime = 0;
+            audio.play();
+        }
+
+        function checkAnswer(choice) {
+            const feedback = document.getElementById('feedback');
+            const container = document.getElementById('captchaContainer');
+            const mainChallenge = document.getElementById('mainChallenge');
+            const wrongAnswerScreen = document.getElementById('wrongAnswerScreen');
+            
+            // 1. Shake the container
+            container.classList.add('shake');
+            setTimeout(() => container.classList.remove('shake'), 500);
+            
+            feedback.className = 'feedback';
+            
+            // 2. Display the snarky feedback briefly
+            if (choice === 'yanny') {
+                feedback.textContent = "It's obviously Laurel! 🙄 Incorrect.";
+            } else {
+                feedback.textContent = "It's obviously Yanny! 🙄 Incorrect.";
+            }
+            
+            // 3. Disable buttons
+            const buttons = document.querySelectorAll('.option-button');
+            buttons.forEach(btn => btn.disabled = true);
+            buttons.forEach(btn => btn.style.opacity = '0.5');
+            buttons.forEach(btn => btn.style.cursor = 'not-allowed');
+
+            // 4. Wait a moment then transition to the wrong answer screen
+            setTimeout(() => {
+                mainChallenge.style.display = 'none';
+                wrongAnswerScreen.style.display = 'block';
+            }, 1500); // 1.5 seconds delay
+        }
+    </script>
+</body>
+</html>
