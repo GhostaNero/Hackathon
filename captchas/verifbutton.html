@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hold to Verify</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+            overflow: hidden;
+            user-select: none; /* Prevents text selection while holding */
+        }
+
+        h2 {
+            color: #333;
+            font-weight: 600;
+        }
+
+        #progress-container {
+            width: 500px;
+            height: 30px;
+            background-color: #e0e0e0;
+            border-radius: 15px;
+            border: 1px solid #ccc;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden; /* Clips the inner bar */
+            margin-bottom: 20px;
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #1976D2;
+            /* This transition makes the progress smooth */
+            transition: width 0.05s linear;
+        }
+
+        #hold-button {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #fff;
+            background-color: #1976D2;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 0.1s ease, background-color 0.1s ease;
+        }
+
+        #hold-button:active {
+            transform: scale(0.98); /* Click-down effect */
+            background-color: #1565C0;
+        }
+
+        #hold-button:disabled {
+            background-color: #90a4ae;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        #message {
+            margin-top: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            height: 25px; /* Reserve space */
+            text-align: center;
+        }
+
+        #message.success {
+            color: #388E3C;
+        }
+
+        #message.fail {
+            color: #D32F2F;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Click and HOLD the button to prove you are human.</h2>
+
+    <div id="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <button id="hold-button">Verify</button>
+
+    <div id="message"></div>
+
+    <script>
+        // Get elements
+        const button = document.getElementById('hold-button');
+        const progressBar = document.getElementById('progress-bar');
+        const message = document.getElementById('message');
+
+        // --- State Variables ---
+        let isHolding = false;
+        let progress = 0;
+        let gameActive = true;
+        let progressInterval = null; // To store our setInterval ID
+        let baitTimer = null; // To store our bait setTimeout ID
+
+        // Function to update the progress bar UI
+        function updateProgressBarUI() {
+            progressBar.style.width = progress + '%';
+        }
+
+        // Function to handle winning
+        function winGame() {
+            if (!gameActive) return;
+            gameActive = false;
+            isHolding = false;
+            clearInterval(progressInterval);
+            clearTimeout(baitTimer);
+
+            message.textContent = "Success! You are... patient.";
+            message.className = 'success';
+            button.disabled = true;
+        }
+
+        // Function to reset the game state
+        function resetGame() {
+            if (!gameActive) return; // Don't reset if already won
+            
+            progress = 0;
+            updateProgressBarUI();
+            message.textContent = "You let go! Resetting...";
+            message.className = 'fail';
+
+            // Clear the "fail" message after a moment
+            setTimeout(() => {
+                if (gameActive) { // Only clear if game is still active
+                    message.textContent = '';
+                    message.className = '';
+                }
+            }, 1500);
+        }
+
+        // --- 1. Mouse Down: Start the process ---
+        button.addEventListener('mousedown', (e) => {
+            if (!gameActive) return;
+            
+            // Prevent right-click
+            if (e.button !== 0) return; 
+
+            isHolding = true;
+            progress = 0;
+            message.textContent = ''; // Clear any previous messages
+            message.className = '';
+            
+            // Start the progress interval
+            clearInterval(progressInterval); // Clear any old ones
+            clearTimeout(baitTimer); // Clear any old bait timers
+            
+            progressInterval = setInterval(updateProgress, 50); // Update 20x/sec
+            
+            e.preventDefault();
+        });
+
+        // --- 2. Mouse Up: Stop the process ---
+        // We listen on the *document* in case the user
+        // drags their mouse off the button and then lets go.
+        document.addEventListener('mouseup', () => {
+            if (!isHolding) return; // Do nothing if not holding
+            
+            isHolding = false;
+            clearInterval(progressInterval); // Stop the main loop
+            clearTimeout(baitTimer); // Stop the bait timer if it's running
+
+            if (progress < 100) {
+                // They let go before finishing
+                resetGame();
+            }
+        });
+
+        // Prevent context menu (right-click) from ruining the hold
+        button.addEventListener('contextmenu', (e) => e.preventDefault());
+
+
+        // --- 3. The Core Progress Logic ---
+        function updateProgress() {
+            if (!isHolding) {
+                clearInterval(progressInterval);
+                return;
+            }
+
+            let increment = 0;
+
+            // Define the non-linear speed
+            if (progress < 20) {
+                increment = 0.25; // Very slow start
+            } else if (progress < 50) {
+                increment = 1;    // Speeds up
+            } else if (progress < 80) {
+                increment = 0.1;  // Agonizingly slow
+            } else if (progress < 99) {
+                increment = 0.5;  // Speeds up to build tension
+            } else if (progress >= 99 && progress < 100) {
+                
+                // --- THE BAIT ---
+                progress = 99;
+                updateProgressBarUI();
+                
+                // Stop this interval
+                clearInterval(progressInterval);
+                
+                // Show fake failure
+                message.textContent = "Verification FAILED!";
+                message.className = 'fail';
+
+                // Set a timer. If they are *still* holding after 2s, they win.
+                baitTimer = setTimeout(() => {
+                    if (isHolding && gameActive) {
+                        progress = 100;
+                        updateProgressBarUI();
+                        winGame();
+                    }
+                }, 2000); // 2-second pause
+
+                return; // Stop execution for this interval
+            }
+
+            progress += increment;
+
+            // Check for win (in case of overshoot, though logic prevents it)
+            if (progress >= 100) {
+                progress = 100;
+                winGame();
+            }
+            
+            updateProgressBarUI();
+        }
+
+    </script>
+</body>
+</html>

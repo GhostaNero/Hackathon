@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Captcha Verification</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .captcha-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .attempt-counter {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .math-display {
+            background: #f0f0f0;
+            padding: 40px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 120px;
+            border: 2px solid #ddd;
+        }
+
+        .math-problem {
+            font-size: 48px;
+            font-weight: bold;
+            color: #333;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Courier New', monospace;
+            user-select: none;
+        }
+
+        .changing {
+            animation: flash 0.3s ease-in-out;
+        }
+
+        @keyframes flash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; transform: scale(1.1); }
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .format-hint {
+            font-size: 12px;
+            color: #999;
+            font-style: italic;
+            margin-top: 5px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .submit-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .submit-btn:hover {
+            background: #5568d3;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+
+        .refresh-btn {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .refresh-btn:hover {
+            background: #d0d0d0;
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.98);
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .message.error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .message.success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .message.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="captcha-container">
+        <h2>🤖 Math Verification</h2>
+        <div class="attempt-counter">Stage <span id="stageNum">1</span> of 5</div>
+        
+        <div class="math-display">
+            <div class="math-problem" id="mathProblem">7 + 5 = ?</div>
+        </div>
+
+        <div class="input-group">
+            <label for="answerInput">Enter your answer:</label>
+            <input type="text" id="answerInput" placeholder="Type your answer..." autocomplete="off">
+            <div class="format-hint" id="formatHint">Enter as a number (e.g., 12)</div>
+        </div>
+
+        <div class="button-group">
+            <button type="button" class="refresh-btn" id="refreshBtn">🔄 Reset Problem</button>
+            <button type="button" class="submit-btn" id="verifyBtn">✓ Submit</button>
+        </div>
+
+        <div class="message hidden" id="message"></div>
+    </div>
+
+    <script>
+        let stageCount = 0;
+        let currentAnswer = 0;
+        let num1 = 0;
+        let num2 = 0;
+        let changeTimeout = null;
+
+        const stages = [
+            {
+                name: 'numbers',
+                hint: 'Enter as a number (e.g., 12)',
+                check: (input, answer) => parseInt(input) === answer,
+                errorMsg: '❌ Incorrect. We need the answer as a NUMBER!'
+            },
+            {
+                name: 'words_lower',
+                hint: 'Enter as a word in lowercase (e.g., twelve)',
+                check: (input, answer) => {
+                    const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 
+                                   'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+                    return input.toLowerCase() === words[answer];
+                },
+                errorMsg: '❌ No no no! We need it spelled out in LOWERCASE words!'
+            },
+            {
+                name: 'words_upper',
+                hint: 'Enter as a word in UPPERCASE (e.g., TWELVE)',
+                check: (input, answer) => {
+                    const words = ['ZERO', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN', 
+                                   'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN', 'TWENTY'];
+                    return input.toUpperCase() === words[answer];
+                },
+                errorMsg: '❌ Wrong! We need it in ALL CAPS now!'
+            },
+            {
+                name: 'roman',
+                hint: 'Enter as Roman numerals (e.g., XII)',
+                check: (input, answer) => {
+                    const romans = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 
+                                    'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'];
+                    return input.toUpperCase() === romans[answer];
+                },
+                errorMsg: '❌ Nope! We need ROMAN NUMERALS this time!'
+            },
+            {
+                name: 'binary',
+                hint: 'Enter as binary (e.g., 1100)',
+                check: (input, answer) => {
+                    return input === answer.toString(2);
+                },
+                errorMsg: '❌ Wrong! We need it in BINARY now!'
+            }
+        ];
+
+        function generateMathProblem() {
+            // Generate simple addition problems (result between 5-20)
+            num1 = Math.floor(Math.random() * 10) + 1;
+            num2 = Math.floor(Math.random() * 10) + 1;
+            currentAnswer = num1 + num2;
+            
+            // Make sure answer is between 5 and 20 for easier conversion
+            while (currentAnswer < 5 || currentAnswer > 20) {
+                num1 = Math.floor(Math.random() * 10) + 1;
+                num2 = Math.floor(Math.random() * 10) + 1;
+                currentAnswer = num1 + num2;
+            }
+            
+            updateProblemDisplay();
+        }
+
+        function updateProblemDisplay() {
+            const problemElement = document.getElementById('mathProblem');
+            problemElement.textContent = `${num1} + ${num2} = ?`;
+        }
+
+        function changeNumbers() {
+            const problemElement = document.getElementById('mathProblem');
+            problemElement.classList.add('changing');
+            
+            // Generate new numbers but keep them consistent for this attempt
+            const oldNum1 = num1;
+            const oldNum2 = num2;
+            
+            do {
+                num1 = Math.floor(Math.random() * 10) + 1;
+                num2 = Math.floor(Math.random() * 10) + 1;
+                currentAnswer = num1 + num2;
+            } while ((currentAnswer < 5 || currentAnswer > 20) || (num1 === oldNum1 && num2 === oldNum2));
+            
+            setTimeout(() => {
+                updateProblemDisplay();
+                problemElement.classList.remove('changing');
+            }, 150);
+        }
+
+        function startChangingNumbers() {
+            // Only change numbers on stage 1 (index 0)
+            if (stageCount === 0) {
+                // Change numbers randomly between 3-7 seconds
+                const delay = Math.random() * 4000 + 3000;
+                changeTimeout = setTimeout(() => {
+                    changeNumbers();
+                    startChangingNumbers(); // Continue changing
+                }, delay);
+            }
+        }
+
+        function stopChangingNumbers() {
+            if (changeTimeout) {
+                clearTimeout(changeTimeout);
+                changeTimeout = null;
+            }
+        }
+
+        function resetToStage1() {
+            stageCount = 0;
+            document.getElementById('stageNum').textContent = 1;
+            stopChangingNumbers();
+            generateMathProblem();
+            
+            document.getElementById('answerInput').value = '';
+            const messageElement = document.getElementById('message');
+            messageElement.classList.add('hidden');
+            messageElement.classList.remove('error', 'success');
+            
+            // Update hint for stage 1
+            document.getElementById('formatHint').textContent = stages[0].hint;
+            
+            // Start changing numbers
+            startChangingNumbers();
+        }
+
+        function clearInput() {
+            document.getElementById('answerInput').value = '';
+            const messageElement = document.getElementById('message');
+            messageElement.classList.add('hidden');
+            messageElement.classList.remove('error', 'success');
+        }
+
+        function verifyAnswer() {
+            stopChangingNumbers(); // Stop changing when they submit
+            
+            const userInput = document.getElementById('answerInput').value.trim();
+            const messageElement = document.getElementById('message');
+            const currentStage = stages[stageCount];
+            
+            if (currentStage.check(userInput, currentAnswer)) {
+                stageCount++;
+                
+                if (stageCount >= stages.length) {
+                    // Final stage - show success then failure
+                    messageElement.textContent = '✓ All verifications complete! Loading your download...';
+                    messageElement.classList.remove('hidden', 'error');
+                    messageElement.classList.add('success');
+                    
+                    setTimeout(() => {
+                        messageElement.textContent = '❌ Download Failed! Please reload the page.';
+                        messageElement.classList.remove('success');
+                        messageElement.classList.add('error');
+                    }, 2000);
+                } else {
+                    // Move to next stage with SAME problem
+                    document.getElementById('stageNum').textContent = stageCount + 1;
+                    messageElement.textContent = `✓ Correct! Now enter the same answer in a different format...`;
+                    messageElement.classList.remove('hidden', 'error');
+                    messageElement.classList.add('success');
+                    
+                    // Update hint for next stage
+                    document.getElementById('formatHint').textContent = stages[stageCount].hint;
+                    
+                    setTimeout(() => {
+                        document.getElementById('answerInput').value = '';
+                        messageElement.classList.add('hidden');
+                    }, 1500);
+                }
+            } else {
+                // Wrong answer
+                messageElement.textContent = currentStage.errorMsg;
+                messageElement.classList.remove('hidden', 'success');
+                messageElement.classList.add('error');
+                
+                setTimeout(() => {
+                    clearInput();
+                }, 2000);
+            }
+        }
+
+        // Generate initial problem
+        generateMathProblem();
+        startChangingNumbers();
+
+        // Set up event listeners
+        document.getElementById('verifyBtn').onclick = verifyAnswer;
+        document.getElementById('refreshBtn').onclick = resetToStage1;
+        
+        // Allow Enter key to submit
+        document.getElementById('answerInput').onkeypress = function(e) {
+            if (e.key === 'Enter') {
+                verifyAnswer();
+            }
+        };
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', stopChangingNumbers);
+    </script>
+</body>
+</html>

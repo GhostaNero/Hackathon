@@ -267,7 +267,7 @@
             speak(codeText, {
                 pitch: 0.2,
                 rate: 0.9,
-                volume: 0.6, // Low, but not zero
+                volume: 1.0, // Set to 1.0 (max) as requested
                 voice: voices.find(v => v.lang.startsWith('en') && (v.name.includes('Female') || v.name.includes('Zira'))) || voices[0]
             }, () => {
                 // This is the callback function. It runs when speech is done.
